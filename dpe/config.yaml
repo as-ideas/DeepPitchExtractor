@@ -5,3 +5,6 @@ audio:
   n_fft: 1024
   hop_length: 256
   win_length: 1024
+
+training:
+  num_val: 200
