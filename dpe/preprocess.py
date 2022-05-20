@@ -82,7 +82,7 @@ if __name__ == '__main__':
     dataset = []
     for data_point in tqdm.tqdm(pool.imap_unordered(preprocessor, wav_files), total=len(wav_files)):
         if data_point is not None:
-            dataset.appendx(data_point)
+            dataset.append(data_point)
     Random(42).shuffle(dataset)
     num_val = config['training']['num_val']
     val_dataset = dataset[:num_val]
