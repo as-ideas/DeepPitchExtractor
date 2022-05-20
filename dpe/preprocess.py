@@ -54,8 +54,8 @@ class Preprocessor:
             spec = np.abs(spec)
             pitch, _ = pw.dio(wav.astype(np.float64), self._sample_rate,
                               frame_period=self._hop_length / self._sample_rate * 1000)
-            np.save(str(self._spec_dir / f'{item_id}.npy'), spec, allow_pickle=False)
-            np.save(str(self._pitch_dir / f'{item_id}.npy'), pitch, allow_pickle=False)
+            torch.save(spec, self._spec_dir / f'{item_id}.pt')
+            torch.save(pitch, self._pitch_dir / f'{item_id}.pt')
             spec_len = spec.shape[-1]
             return item_id, spec_len
         except BaseException as e:

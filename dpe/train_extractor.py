@@ -18,8 +18,6 @@ class PitchDataset(Dataset):
 
     def __getitem__(self, index: int) -> Dict[str, torch.Tensor]:
         item_id = self._item_ids[index]
-        spec = np.load(str(self._spec_path / f'{item_id}.pt'))
-        pitch = np.load(str(self._pitch_path / f'{item_id}.pt'))
-        spec = torch.tensor(spec).float()
-        pitch = torch.tensor(pitch).float()
+        spec = torch.load(self._spec_path / f'{item_id}.pt')
+        pitch = torch.load(self._pitch_path / f'{item_id}.pt')
         return {'spec': spec, 'pitch': pitch}
