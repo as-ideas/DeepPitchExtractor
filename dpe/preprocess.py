@@ -52,8 +52,10 @@ class Preprocessor:
                 hop_length=self._hop_length,
                 win_length=self._win_length)
             spec = np.abs(spec)
+            spec = torch.tensor(spec).float()
             pitch, _ = pw.dio(wav.astype(np.float64), self._sample_rate,
                               frame_period=self._hop_length / self._sample_rate * 1000)
+            pitch = torch.tensor(pitch).float()
             torch.save(spec, self._spec_dir / f'{item_id}.pt')
             torch.save(pitch, self._pitch_dir / f'{item_id}.pt')
             spec_len = spec.shape[-1]
@@ -80,7 +82,7 @@ if __name__ == '__main__':
     dataset = []
     for data_point in tqdm.tqdm(pool.imap_unordered(preprocessor, wav_files), total=len(wav_files)):
         if data_point is not None:
-            dataset.append(data_point)
+            dataset.appendx(data_point)
     Random(42).shuffle(dataset)
     num_val = config['training']['num_val']
     val_dataset = dataset[:num_val]
