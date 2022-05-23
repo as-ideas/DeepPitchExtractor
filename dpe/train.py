@@ -38,7 +38,7 @@ if __name__ == '__main__':
         data_path=data_path, batch_size=batch_size)
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    model = PitchExtractor(in_channels=config['audio']['n_fft'] // 2 + 1,
+    model = PitchExtractor(in_channels=config['audio']['n_fft'] // 2 + 2,
                            out_channels=config['model']['out_channels'] + 1,
                            conv_channels=config['model']['conv_channels'],
                            dropout=config['model']['dropout']).to(device)
