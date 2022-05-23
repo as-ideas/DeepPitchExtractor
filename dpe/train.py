@@ -51,14 +51,15 @@ if __name__ == '__main__':
     train_dataloader, val_dataloader = create_train_val_dataloader(
         data_path=data_path, batch_size=batch_size)
 
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model = PitchExtractor(in_channels=config['audio']['n_fft'] // 2 + 1,
                            out_channels=config['model']['out_channels'],
                            conv_channels=config['model']['conv_channels'],
-                           dropout=config['model']['dropout'])
+                           dropout=config['model']['dropout']).to(device)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=1e-4)
     writer = SummaryWriter(log_dir='/tmp/pitch_log', comment='v1')
     step = 0
-    ce_loss = torch.nn.CrossEntropyLoss()
+    ce_loss = torch.nn.CrossEntropyLoss().to(device)
     val_batches = sorted([b for b in val_dataloader], key=lambda x: x['spec_len'][0])
     pmin, pmax = config['audio']['pitch_min'], config['audio']['pitch_max']
     out_channels = config['model']['out_channels']
@@ -66,7 +67,7 @@ if __name__ == '__main__':
     for epoch in range(config['training']['n_epochs']):
         for batch in tqdm.tqdm(train_dataloader, total=len(train_dataloader)):
             step += 1
-            spec = batch['spec']
+            spec = batch['spec'].to(device)
             logits = model(spec).squeeze(1)
             pitch_target = normalize_pitch(batch['pitch'],
                                            pmin=pmin, pmax=pmax, n_channels=out_channels)
@@ -83,7 +84,7 @@ if __name__ == '__main__':
 
         val_loss, val_batch, logits = 0, None, None
         for val_batch in val_batches:
-            pitch_target = normalize_pitch(val_batch['pitch'],
+            pitch_target = normalize_pitch(val_batch['pitch'].to(device),
                                            pmin=pmin, pmax=pmax, n_channels=out_channels)
             with torch.no_grad():
                 logits = model(val_batch['spec'])
@@ -97,7 +98,7 @@ if __name__ == '__main__':
         pitch_pred_nonzeros = torch.argmax(logits[:, 1:, :], dim=1) + 1
         pitch_target_fig = plot_pitch(pitch_target[0, :spec_len].cpu().numpy())
         pitch_pred_fig = plot_pitch(pitch_pred[0, :spec_len].cpu().numpy())
-        pitch_pred_nonzero_fig = plot_pitch(pitch_pred[0, :spec_len].cpu().numpy())
+        pitch_pred_nonzero_fig = plot_pitch(pitch_pred_nonzeros[0, :spec_len].cpu().numpy())
         writer.add_figure('Pitch/target', pitch_target_fig, global_step=step)
         writer.add_figure('Pitch/pred', pitch_pred_fig, global_step=step)
         writer.add_figure('Pitch/pred_nonzero', pitch_pred_nonzero_fig, global_step=step)
