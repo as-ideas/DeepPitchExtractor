@@ -1,7 +1,7 @@
 paths:
   data_dir: 'data'
-  checkpoint_dir: '/tmp/checkpoints'
-  log_dir: '/tmp/pitch_log'
+  checkpoint_dir: 'checkpoints'
+  log_dir: 'pitch_log'
 
 audio:
   sample_rate: 22050
@@ -17,6 +17,6 @@ training:
   n_epochs: 1000
 
 model:
-  conv_channels: 32
+  conv_channels: 256
   out_channels: 512
   dropout: 0.5
