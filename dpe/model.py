@@ -28,17 +28,17 @@ class BatchNormConv(nn.Module):
 class PitchExtractor(torch.nn.Module):
 
     def __init__(self,
-                 spec_dim: int,
-                 n_channels: int,
-                 conv_dim: int = 256,
+                 in_channels: int,
+                 out_channels: int,
+                 conv_channels: int = 32,
                  dropout: float = 0.5):
         super().__init__()
         self.convs = torch.nn.ModuleList([
-            BatchNormConv(spec_dim, conv_dim, 5),
-            BatchNormConv(conv_dim, conv_dim, 5),
-            BatchNormConv(conv_dim, conv_dim, 5),
+            BatchNormConv(in_channels, conv_channels, 3),
+            BatchNormConv(conv_channels, conv_channels, 3),
+            BatchNormConv(conv_channels, conv_channels, 3),
         ])
-        self.logit_lin = nn.Linear(conv_dim, n_channels)
+        self.logit_lin = nn.Linear(conv_channels, out_channels)
         self.dropout = dropout
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
