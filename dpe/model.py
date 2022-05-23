@@ -29,6 +29,7 @@ class PitchExtractor(torch.nn.Module):
 
     def __init__(self,
                  spec_dim: int,
+                 n_channels: int,
                  conv_dim: int = 256,
                  dropout: float = 0.5):
         super().__init__()
@@ -37,17 +38,13 @@ class PitchExtractor(torch.nn.Module):
             BatchNormConv(conv_dim, conv_dim, 5),
             BatchNormConv(conv_dim, conv_dim, 5),
         ])
-        self.pitch_lin = nn.Linear(conv_dim, 1)
-        self.logit_lin = nn.Linear(conv_dim, 2)
+        self.logit_lin = nn.Linear(conv_dim, n_channels)
         self.dropout = dropout
 
-    def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         for conv in self.convs:
             x = conv(x)
             x = F.dropout(x, self.dropout, training=self.training)
-
         x = x.transpose(1, 2)
-        pitch_out = self.pitch_lin(x).transpose(1, 2)
         logit_out = self.logit_lin(x).transpose(1, 2)
-
-        return {'pitch': pitch_out, 'logits': logit_out}
+        return logit_out

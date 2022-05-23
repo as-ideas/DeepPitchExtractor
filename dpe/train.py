@@ -30,6 +30,17 @@ def plot_pitch(pitch: np.array, color='gray') -> Figure:
     return fig
 
 
+def normalize_pitch(pitch: torch.Tensor,
+                    pmin: int,
+                    pmax: int,
+                    n_channels: int) -> torch.Tensor:
+    valid_inds = torch.logical_and(pmin <= pitch, pmax >= pitch)
+    pitch[valid_inds] = (pitch[valid_inds] - pmin) / pmax * n_channels
+    pitch[~valid_inds] = 0
+    pitch = pitch.long()
+    return pitch
+
+
 if __name__ == '__main__':
     config = read_config(args.config)
 
@@ -38,49 +49,40 @@ if __name__ == '__main__':
     train_dataloader, val_dataloader = create_train_val_dataloader(
         data_path=data_path, batch_size=batch_size)
 
-    model = PitchExtractor(spec_dim=config['audio']['n_fft'] // 2 + 1)
+    model = PitchExtractor(spec_dim=config['audio']['n_fft'] // 2 + 1,
+                           n_channels=config['model']['n_channels'])
     optimizer = torch.optim.Adam(params=model.parameters(), lr=1e-4)
     writer = SummaryWriter(log_dir='/tmp/pitch_log', comment='v1')
     step = 0
     ce_loss = torch.nn.CrossEntropyLoss()
     val_batches = [b for b in val_dataloader]
+    pmin, pmax = config['audio']['pitch_min'], config['audio']['pitch_max']
+    n_channels = config['model']['n_channels']
 
     for epoch in range(100):
         for batch in tqdm.tqdm(train_dataloader, total=len(train_dataloader)):
             step += 1
             spec = batch['spec']
-            pred = model(spec)
-            pitch_pred = pred['pitch'].squeeze(1)
-            nonzero_inds = batch['pitch'] != 0
-            pitch_loss = F.l1_loss(pitch_pred[nonzero_inds], batch['pitch'][nonzero_inds])
-            bin_target = (batch['pitch'] != 0).long()
-            bin_loss = ce_loss(pred['logits'], bin_target)
-            loss = pitch_loss + bin_loss
+            logits = model(spec).squeeze(1)
+            pitch_target = normalize_pitch(batch['pitch'],
+                                           pmin=pmin, pmax=pmax, n_channels=n_channels)
+            loss = ce_loss(logits, pitch_target)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            writer.add_scalar('pitch_loss', pitch_loss.item(), global_step=step)
-            writer.add_scalar('bin_loss', bin_loss.item(), global_step=step)
+            writer.add_scalar('loss', loss.item(), global_step=step)
 
         val_batch = val_batches[0]
         with torch.no_grad():
-            pred = model(val_batch['spec'])
+            logits = model(val_batch['spec'])
 
         spec_len = val_batch['spec_len'][0]
 
-        bin_target = (val_batch['pitch'] != 0).long()
-        bin_pred_probs = pred['logits'].softmax(1)
-        bin_pred_thres = (bin_pred_probs[0, 1, :] > 0.5).float()
-        pitch_thres_pred = pred['pitch'][0, 0, :] * bin_pred_thres
+        pitch_target = normalize_pitch(val_batch['pitch'],
+                                       pmin=pmin, pmax=pmax, n_channels=n_channels)
 
-        pitch_target_fig = plot_pitch(val_batch['pitch'][0, :spec_len].cpu().numpy())
-        pitch_fig = plot_pitch(pred['pitch'][0, 0, :spec_len].cpu().numpy())
-        pitch_thres_fig = plot_pitch(pitch_thres_pred[:spec_len].cpu().numpy())
-        bin_target_fig = plot_pitch(bin_target[0, :spec_len])
-        bin_fig = plot_pitch(bin_pred_probs[0, 1, :spec_len])
-
+        pitch_pred = torch.argmax(logits, dim=1)
+        pitch_target_fig = plot_pitch(pitch_target[0, :spec_len].cpu().numpy())
+        pitch_pred_fig = plot_pitch(logits[0, :spec_len].cpu().numpy())
         writer.add_figure('Pitch/target', pitch_target_fig, global_step=step)
-        writer.add_figure('Pitch/pred', pitch_fig, global_step=step)
-        writer.add_figure('Pitch/pred_thres', pitch_thres_fig, global_step=step)
-        writer.add_figure('Binary/target', bin_target_fig, global_step=step)
-        writer.add_figure('Binary/pred', bin_fig, global_step=step)
+        writer.add_figure('Pitch/pred', pitch_pred_fig, global_step=step)
