@@ -38,7 +38,7 @@ class PitchExtractor(torch.nn.Module):
             BatchNormConv(conv_dim, conv_dim, 5),
         ])
         self.pitch_lin = nn.Linear(conv_dim, 1)
-        self.logit_lin = nn.Linear(conv_dim, 1)
+        self.logit_lin = nn.Linear(conv_dim, 2)
         self.dropout = dropout
 
     def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
@@ -47,6 +47,7 @@ class PitchExtractor(torch.nn.Module):
             x = F.dropout(x, self.dropout, training=self.training)
 
         x = x.transpose(1, 2)
-        pitch_out = self.pitch_lin(x)
-        logit_out = self.logit_lin(x)
+        pitch_out = self.pitch_lin(x).transpose(1, 2)
+        logit_out = self.logit_lin(x).transpose(1, 2)
+
         return {'pitch': pitch_out, 'logits': logit_out}
