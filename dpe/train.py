@@ -70,7 +70,7 @@ if __name__ == '__main__':
             spec = batch['spec'].to(device)
             logits = model(spec).squeeze(1)
             pitch_target = normalize_pitch(batch['pitch'],
-                                           pmin=pmin, pmax=pmax, n_channels=out_channels)
+                                           pmin=pmin, pmax=pmax, n_channels=out_channels).to(device)
             loss = ce_loss(logits, pitch_target)
             optimizer.zero_grad()
             loss.backward()
@@ -85,9 +85,9 @@ if __name__ == '__main__':
         val_loss, val_batch, logits = 0, None, None
         for val_batch in val_batches:
             pitch_target = normalize_pitch(val_batch['pitch'].to(device),
-                                           pmin=pmin, pmax=pmax, n_channels=out_channels)
+                                           pmin=pmin, pmax=pmax, n_channels=out_channels).to(device)
             with torch.no_grad():
-                logits = model(val_batch['spec'])
+                logits = model(val_batch['spec'].to(device))
                 loss = ce_loss(logits, pitch_target)
             val_loss += loss
 
