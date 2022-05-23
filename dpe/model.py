@@ -25,7 +25,7 @@ class BatchNormConv(nn.Module):
         return x
 
 
-class PitchExtractor(torch.nn.Module):
+class PitchModel(torch.nn.Module):
 
     def __init__(self,
                  in_channels: int,

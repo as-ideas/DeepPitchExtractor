@@ -11,7 +11,7 @@ import argparse
 from pathlib import Path
 
 from dpe.dataset import create_train_val_dataloader
-from dpe.model import PitchExtractor
+from dpe.model import PitchModel
 from dpe.utils import read_config, normalize_pitch, denormalize_pitch
 from torch.utils.tensorboard import SummaryWriter
 
@@ -38,10 +38,10 @@ if __name__ == '__main__':
         data_path=data_path, batch_size=batch_size)
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    model = PitchExtractor(in_channels=config['audio']['n_fft'] // 2 + 1,
-                           out_channels=config['model']['out_channels'] + 2,
-                           conv_channels=config['model']['conv_channels'],
-                           dropout=config['model']['dropout']).to(device)
+    model = PitchModel(in_channels=config['audio']['n_fft'] // 2 + 1,
+                       out_channels=config['model']['out_channels'] + 2,
+                       conv_channels=config['model']['conv_channels'],
+                       dropout=config['model']['dropout']).to(device)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=1e-4)
     writer = SummaryWriter(log_dir=config['paths']['log_dir'], comment='v1')
     step = 0
