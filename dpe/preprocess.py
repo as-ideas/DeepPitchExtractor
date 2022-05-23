@@ -14,7 +14,7 @@ from pathlib import Path
 from dpe.utils import read_config, pickle_binary
 
 
-def valid_n_workers(num):
+def valid_n_workers(num: int) -> int:
     n = int(num)
     if n < 1:
         raise argparse.ArgumentTypeError('%r must be an integer greater than 0' % num)
@@ -84,7 +84,7 @@ if __name__ == '__main__':
         if data_point is not None:
             dataset.append(data_point)
     Random(42).shuffle(dataset)
-    num_val = config['training']['num_val']
+    num_val = config['training']['n_val']
     val_dataset = dataset[:num_val]
     train_dataset = dataset[num_val:]
     pickle_binary(train_dataset, data_dir / 'train_dataset.pkl')

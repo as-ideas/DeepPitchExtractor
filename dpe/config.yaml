@@ -1,4 +1,7 @@
-data_dir: 'data'
+paths:
+  data_dir: 'data'
+  checkpoint_dir: '/tmp/checkpoints'
+  log_dir: '/tmp/pitch_log'
 
 audio:
   sample_rate: 22050
@@ -9,8 +12,9 @@ audio:
   pitch_max: 500
 
 training:
-  num_val: 200
+  n_val: 200
   batch_size: 32
+  n_epochs: 1000
 
 model:
   n_channels: 512

@@ -44,7 +44,9 @@ def normalize_pitch(pitch: torch.Tensor,
 if __name__ == '__main__':
     config = read_config(args.config)
 
-    data_path = Path(config['data_dir'])
+    data_path = Path(config['paths']['data_dir'])
+    cp_path = Path(config['paths']['checkpoint_dir'])
+    cp_path.mkdir(parents=True, exist_ok=True)
     batch_size = config['training']['batch_size']
     train_dataloader, val_dataloader = create_train_val_dataloader(
         data_path=data_path, batch_size=batch_size)
@@ -55,11 +57,11 @@ if __name__ == '__main__':
     writer = SummaryWriter(log_dir='/tmp/pitch_log', comment='v1')
     step = 0
     ce_loss = torch.nn.CrossEntropyLoss()
-    val_batches = [b for b in val_dataloader]
+    val_batches = sorted([b for b in val_dataloader], key=lambda x: x['spec_len'][0])
     pmin, pmax = config['audio']['pitch_min'], config['audio']['pitch_max']
     n_channels = config['model']['n_channels']
 
-    for epoch in range(100):
+    for epoch in range(config['training']['n_epochs']):
         for batch in tqdm.tqdm(train_dataloader, total=len(train_dataloader)):
             step += 1
             spec = batch['spec']
@@ -72,17 +74,29 @@ if __name__ == '__main__':
             optimizer.step()
             writer.add_scalar('loss', loss.item(), global_step=step)
 
-        val_batch = val_batches[0]
+        torch.save({'model': model.state_dict(),
+                    'optimizer': optimizer.state_dict(),
+                    'config': config,
+                    'step': step}, cp_path / 'latest_model.pt')
+
+        val_loss = 0.
+        for val_batch in val_batches:
+            pitch_target = normalize_pitch(val_batch['pitch'],
+                                           pmin=pmin, pmax=pmax, n_channels=n_channels)
+            with torch.no_grad():
+                logits = model(val_batch['spec'])
+                loss = ce_loss(logits, pitch_target)
+            val_loss += loss
+
+        val_batch = val_batches[-1]
         with torch.no_grad():
             logits = model(val_batch['spec'])
-
         spec_len = val_batch['spec_len'][0]
-
         pitch_target = normalize_pitch(val_batch['pitch'],
                                        pmin=pmin, pmax=pmax, n_channels=n_channels)
-
         pitch_pred = torch.argmax(logits, dim=1)
         pitch_target_fig = plot_pitch(pitch_target[0, :spec_len].cpu().numpy())
-        pitch_pred_fig = plot_pitch(logits[0, :spec_len].cpu().numpy())
+        pitch_pred_fig = plot_pitch(pitch_pred[0, :spec_len].cpu().numpy())
         writer.add_figure('Pitch/target', pitch_target_fig, global_step=step)
         writer.add_figure('Pitch/pred', pitch_pred_fig, global_step=step)
+        writer.add_figure('Loss/val', val_loss, global_step=step)

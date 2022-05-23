@@ -90,7 +90,8 @@ def create_train_val_dataloader(data_path: Path, batch_size: int) -> Tuple[DataL
                               batch_size=batch_size,
                               sampler=BinnedLengthSampler(train_lens, batch_size, batch_size*3),
                               num_workers=0,
-                              pin_memory=True)
+                              pin_memory=True,
+                              drop_last=True)
     val_loader = DataLoader(val_dataset,
                             collate_fn=lambda batch: collate_dataset(batch),
                             batch_size=batch_size,
