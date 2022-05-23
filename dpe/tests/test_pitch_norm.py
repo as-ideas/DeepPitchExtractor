@@ -11,7 +11,7 @@ class TestPitchNorm(unittest.TestCase):
         pitch = torch.tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         pmin = 2
         pmax = 8
-        n_channels = 116
+        n_channels = 6
 
         normalized = normalize_pitch(pitch=pitch, pmin=pmin,
                                      pmax=pmax, n_channels=n_channels)

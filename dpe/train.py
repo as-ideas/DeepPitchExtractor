@@ -27,8 +27,6 @@ def plot_pitch(pitch: np.array, color='gray') -> Figure:
     return fig
 
 
-
-
 if __name__ == '__main__':
     config = read_config(args.config)
 
@@ -41,7 +39,7 @@ if __name__ == '__main__':
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model = PitchExtractor(in_channels=config['audio']['n_fft'] // 2 + 1,
-                           out_channels=config['model']['out_channels'],
+                           out_channels=config['model']['out_channels'] + 1,
                            conv_channels=config['model']['conv_channels'],
                            dropout=config['model']['dropout']).to(device)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=1e-4)
