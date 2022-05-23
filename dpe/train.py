@@ -81,7 +81,7 @@ if __name__ == '__main__':
                     'config': config,
                     'step': step}, cp_path / 'latest_model.pt')
 
-        val_loss = 0.
+        val_loss, val_batch, logits = 0, None, None
         for val_batch in val_batches:
             pitch_target = normalize_pitch(val_batch['pitch'],
                                            pmin=pmin, pmax=pmax, n_channels=out_channels)
@@ -90,15 +90,15 @@ if __name__ == '__main__':
                 loss = ce_loss(logits, pitch_target)
             val_loss += loss
 
-        val_batch = val_batches[-1]
-        with torch.no_grad():
-            logits = model(val_batch['spec'])
         spec_len = val_batch['spec_len'][0]
         pitch_target = normalize_pitch(val_batch['pitch'],
                                        pmin=pmin, pmax=pmax, n_channels=out_channels)
         pitch_pred = torch.argmax(logits, dim=1)
+        pitch_pred_nonzeros = torch.argmax(logits[:, 1:, :], dim=1) + 1
         pitch_target_fig = plot_pitch(pitch_target[0, :spec_len].cpu().numpy())
         pitch_pred_fig = plot_pitch(pitch_pred[0, :spec_len].cpu().numpy())
+        pitch_pred_nonzero_fig = plot_pitch(pitch_pred[0, :spec_len].cpu().numpy())
         writer.add_figure('Pitch/target', pitch_target_fig, global_step=step)
         writer.add_figure('Pitch/pred', pitch_pred_fig, global_step=step)
-        writer.add_figure('Loss/val', float(val_loss), global_step=step)
+        writer.add_figure('Pitch/pred_nonzero', pitch_pred_nonzero_fig, global_step=step)
+        writer.add_scalar('Loss/val', float(val_loss) / len(val_batches), global_step=step)
