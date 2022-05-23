@@ -1,3 +1,4 @@
+import torch
 import pickle
 import yaml
 from pathlib import Path
@@ -28,3 +29,27 @@ def read_config(path: str) -> Dict[str, Any]:
 def save_config(config: Dict[str, Any], path: str) -> None:
     with open(path, 'w+', encoding='utf-8') as stream:
         yaml.dump(config, stream, default_flow_style=False)
+
+
+def normalize_pitch(pitch: torch.Tensor,
+                    pmin: int,
+                    pmax: int,
+                    n_channels: int) -> torch.Tensor:
+    pitch = torch.clone(pitch)
+    valid_inds = torch.logical_and(pmin <= pitch, pmax >= pitch)
+    pitch = (pitch - pmin) / (pmax - pmin) * n_channels + 1
+    pitch = torch.round(pitch).long()
+    pitch[~valid_inds] = 0
+    return pitch
+
+
+def denormalize_pitch(pitch: torch.Tensor,
+                      pmin: int,
+                      pmax: int,
+                      n_channels: int) -> torch.Tensor:
+    pitch = torch.clone(pitch)
+    valid_inds = pitch > 0
+    pitch = (pitch - 1) * (pmax - pmin) / n_channels + pmin
+    pitch[~valid_inds] = 0
+    pitch = pitch.float()
+    return pitch

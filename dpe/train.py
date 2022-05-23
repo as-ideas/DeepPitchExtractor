@@ -1,21 +1,18 @@
-import torch
-import librosa
 import matplotlib as mpl
-from matplotlib.figure import Figure
 import numpy as np
+import torch
+from matplotlib.figure import Figure
+
 mpl.use('agg')  # Use non-interactive backend by default
 import matplotlib.pyplot as plt
 
-from typing import Dict, Any, Tuple, Union
-import torch.nn.functional as F
 import tqdm
 import argparse
-from multiprocessing import Pool, cpu_count
 from pathlib import Path
 
 from dpe.dataset import create_train_val_dataloader
 from dpe.model import PitchExtractor
-from dpe.utils import read_config, pickle_binary
+from dpe.utils import read_config
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -30,16 +27,6 @@ def plot_pitch(pitch: np.array, color='gray') -> Figure:
     return fig
 
 
-def normalize_pitch(pitch: torch.Tensor,
-                    pmin: int,
-                    pmax: int,
-                    n_channels: int) -> torch.Tensor:
-    pitch = torch.clone(pitch)
-    valid_inds = torch.logical_and(pmin <= pitch, pmax >= pitch)
-    pitch[valid_inds] = (pitch[valid_inds] - pmin) / pmax * n_channels
-    pitch[~valid_inds] = 0
-    pitch = pitch.long()
-    return pitch
 
 
 if __name__ == '__main__':
@@ -102,3 +89,4 @@ if __name__ == '__main__':
         writer.add_figure('Pitch/pred', pitch_pred_fig, global_step=step)
         writer.add_figure('Pitch/pred_nonzero', pitch_pred_nonzero_fig, global_step=step)
         writer.add_scalar('Loss/val', float(val_loss) / len(val_batches), global_step=step)
+
