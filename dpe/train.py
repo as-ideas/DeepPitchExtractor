@@ -49,10 +49,12 @@ if __name__ == '__main__':
         for batch in tqdm.tqdm(train_dataloader, total=len(train_dataloader)):
             step += 1
             spec = batch['spec']
-            out = model(spec)
-            pitch_loss = F.l1_loss(out['pitch'].squeeze(1), batch['pitch'])
+            pred = model(spec)
+            pitch_pred = pred['pitch'].squeeze(1)
+            nonzero_inds = batch['pitch'] != 0
+            pitch_loss = F.l1_loss(pitch_pred[nonzero_inds], batch['pitch'][nonzero_inds])
             bin_target = (batch['pitch'] != 0).long()
-            bin_loss = ce_loss(out['logits'], bin_target)
+            bin_loss = ce_loss(pred['logits'], bin_target)
             loss = pitch_loss + bin_loss
             optimizer.zero_grad()
             loss.backward()
@@ -60,22 +62,25 @@ if __name__ == '__main__':
             writer.add_scalar('pitch_loss', pitch_loss.item(), global_step=step)
             writer.add_scalar('bin_loss', bin_loss.item(), global_step=step)
 
-            print(loss.item())
-
         val_batch = val_batches[0]
         with torch.no_grad():
             pred = model(val_batch['spec'])
 
         spec_len = val_batch['spec_len'][0]
-        pitch_target_fig = plot_pitch(val_batch['pitch'][0, :spec_len].cpu().numpy())
-        pitch_fig = plot_pitch(pred['pitch'][0, 0, :spec_len].cpu().numpy())
 
         bin_target = (val_batch['pitch'] != 0).long()
-        bin_target_fig = plot_pitch(bin_target[0, :spec_len])
         bin_pred_probs = pred['logits'].softmax(1)
+        bin_pred_thres = (bin_pred_probs[0, 1, :] > 0.5).float()
+        pitch_thres_pred = pred['pitch'][0, 0, :] * bin_pred_thres
+
+        pitch_target_fig = plot_pitch(val_batch['pitch'][0, :spec_len].cpu().numpy())
+        pitch_fig = plot_pitch(pred['pitch'][0, 0, :spec_len].cpu().numpy())
+        pitch_thres_fig = plot_pitch(pitch_thres_pred[:spec_len].cpu().numpy())
+        bin_target_fig = plot_pitch(bin_target[0, :spec_len])
         bin_fig = plot_pitch(bin_pred_probs[0, 1, :spec_len])
 
         writer.add_figure('Pitch/target', pitch_target_fig, global_step=step)
         writer.add_figure('Pitch/pred', pitch_fig, global_step=step)
+        writer.add_figure('Pitch/pred_thres', pitch_thres_fig, global_step=step)
         writer.add_figure('Binary/target', bin_target_fig, global_step=step)
         writer.add_figure('Binary/pred', bin_fig, global_step=step)
