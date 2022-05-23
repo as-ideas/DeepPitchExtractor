@@ -12,7 +12,7 @@ from pathlib import Path
 
 from dpe.dataset import create_train_val_dataloader
 from dpe.model import PitchExtractor
-from dpe.utils import read_config
+from dpe.utils import read_config, normalize_pitch, denormalize_pitch
 from torch.utils.tensorboard import SummaryWriter
 
 
