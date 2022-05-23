@@ -57,7 +57,7 @@ if __name__ == '__main__':
                            conv_channels=config['model']['conv_channels'],
                            dropout=config['model']['dropout']).to(device)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=1e-4)
-    writer = SummaryWriter(log_dir='/tmp/pitch_log', comment='v1')
+    writer = SummaryWriter(log_dir=config['paths']['log_dir'], comment='v1')
     step = 0
     ce_loss = torch.nn.CrossEntropyLoss().to(device)
     val_batches = sorted([b for b in val_dataloader], key=lambda x: x['spec_len'][0])
