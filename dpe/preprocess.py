@@ -11,6 +11,7 @@ import argparse
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
 
+from dpe.audio import AudioProcessor
 from dpe.utils import read_config, pickle_binary
 
 
@@ -25,21 +26,13 @@ class Preprocessor:
 
     def __init__(self,
                  data_dir: Path,
-                 sample_rate: int,
-                 hop_length: int,
-                 win_length: int,
-                 n_fft: int) -> None:
+                 audio_processor: AudioProcessor) -> None:
         self._data_dir = data_dir
         self._spec_dir = self._data_dir / 'specs'
         self._pitch_dir = self._data_dir / 'pitches'
         self._spec_dir.mkdir(parents=True, exist_ok=True)
         self._pitch_dir.mkdir(parents=True, exist_ok=True)
-        self._sample_rate = sample_rate
-        self._hop_length = hop_length
-        self._win_length = win_length
-        self._n_fft = n_fft
-        self._hann_window = torch.hann_window(self._win_length)
-
+        self._audio = audio_processor
         pass
 
     def __call__(self, path: Path) -> Union[Tuple[str, int], None]:
@@ -48,13 +41,13 @@ class Preprocessor:
             wav, _ = librosa.load(str(path))
             spec = librosa.stft(
                 y=wav,
-                n_fft=self._n_fft,
-                hop_length=self._hop_length,
-                win_length=self._win_length)
+                n_fft=self._audio.n_fft,
+                hop_length=self._audio.hop_length,
+                win_length=self._audio.win_length)
             spec = np.abs(spec)
             spec = torch.tensor(spec).float()
-            pitch, _ = pw.dio(wav.astype(np.float64), self._sample_rate,
-                              frame_period=self._hop_length / self._sample_rate * 1000)
+            pitch, _ = pw.dio(wav.astype(np.float64), self._audio.sample_rate,
+                              frame_period=self._audio.hop_length / self._audio.sample_rate * 1000)
             pitch = torch.tensor(pitch).float()
             torch.save(spec, self._spec_dir / f'{item_id}.pt')
             torch.save(pitch, self._pitch_dir / f'{item_id}.pt')
@@ -78,7 +71,8 @@ if __name__ == '__main__':
     wav_files = list(Path(args.path).glob('**/*.wav'))
     n_workers = max(1, args.num_workers)
     pool = Pool(processes=n_workers)
-    preprocessor = Preprocessor(data_dir=data_dir, **config['audio'])
+    audio = AudioProcessor(**config['audio'])
+    preprocessor = Preprocessor(data_dir=data_dir, audio_processor=audio)
     dataset = []
     for data_point in tqdm.tqdm(pool.imap_unordered(preprocessor, wav_files), total=len(wav_files)):
         if data_point is not None:

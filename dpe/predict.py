@@ -1,8 +1,6 @@
 import torch
-import librosa
-import numpy as np
-
 from dpe.model import PitchModel
+from dpe.audio import AudioProcessor
 from dpe.utils import denormalize_pitch
 
 if __name__ == '__main__':
@@ -13,19 +11,15 @@ if __name__ == '__main__':
                             map_location=torch.device('cpu'))
 
     config = checkpoint['config']
-    wav, _ = librosa.load(str(path), sr=22050)
-    spec = librosa.stft(y=wav,
-                        n_fft=config['audio']['n_fft'],
-                        hop_length=config['audio']['hop_length'],
-                        win_length=config['audio']['win_length'])
-    spec = np.abs(spec)
+    audio = AudioProcessor(**config['audio'])
+    wav = audio.load_wav(path)
+    spec = audio.wav_to_spec(wav).unsqueeze(0)
     model = PitchModel(in_channels=config['audio']['n_fft'] // 2 + 1,
                        out_channels=config['model']['out_channels'] + 2,
                        conv_channels=config['model']['conv_channels'],
                        dropout=config['model']['dropout'])
     model.load_state_dict(checkpoint['model'])
     model.eval()
-    spec = torch.tensor(spec).float().unsqueeze(0)
     pred = model(spec)
     pitch = torch.argmax(pred, dim=1)
     pitch = denormalize_pitch(pitch=pitch,
