@@ -53,6 +53,7 @@ if __name__ == '__main__':
     for epoch in range(config['training']['n_epochs']):
         for batch in tqdm.tqdm(train_dataloader, total=len(train_dataloader)):
             step += 1
+            model.train()
             spec = batch['spec'].to(device)
             logits = model(spec).squeeze(1)
             pitch_target = normalize_pitch(batch['pitch'],
@@ -69,6 +70,7 @@ if __name__ == '__main__':
                     'step': step}, cp_path / 'latest_model.pt')
 
         val_loss, val_batch, logits, pitch_target = 0, None, None, None
+        model.eval()
         for val_batch in val_batches:
             pitch_target = normalize_pitch(val_batch['pitch'].to(device),
                                            pmin=pmin, pmax=pmax, n_channels=out_channels).to(device)
