@@ -34,6 +34,7 @@ def normalize_pitch(pitch: torch.Tensor,
                     pmin: int,
                     pmax: int,
                     n_channels: int) -> torch.Tensor:
+    pitch = torch.clone(pitch)
     valid_inds = torch.logical_and(pmin <= pitch, pmax >= pitch)
     pitch[valid_inds] = (pitch[valid_inds] - pmin) / pmax * n_channels
     pitch[~valid_inds] = 0
